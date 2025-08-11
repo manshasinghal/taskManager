@@ -1,15 +1,6 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tasks';
-mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-}).then(() => {
-  console.log('Connected to MongoDB successfully! ');
-}).catch(err => {
-  console.error('Could not connect to MongoDB:', err);
-});
+
 
 const UserSchema = new mongoose.Schema({
   email: {
