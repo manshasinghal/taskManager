@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const Home = ({ user, userId, setUser }) => {
@@ -10,7 +10,8 @@ const Home = ({ user, userId, setUser }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [taskToDeleteId, setTaskToDeleteId] = useState(null);
 
-  const fetchTasks = async () => {
+  // Wrap fetchTasks in useCallback to ensure it's a stable function
+  const fetchTasks = useCallback(async () => {
     try {
       if (userId) {
         const response = await axios.get(`http://localhost:5000/api/tasks/${userId}`);
@@ -20,11 +21,12 @@ const Home = ({ user, userId, setUser }) => {
       console.error("Error fetching tasks:", error);
       setMessage("Failed to load tasks. Please try again.");
     }
-  };
+  }, [userId]); // The dependency is userId, so the function only changes if userId changes
 
+  // useEffect hook now depends on the stable fetchTasks function
   useEffect(() => {
     fetchTasks();
-  }, [userId, fetchTasks]);
+  }, [fetchTasks]);
 
   const handleAddTask = async (e) => {
     e.preventDefault();
@@ -32,11 +34,14 @@ const Home = ({ user, userId, setUser }) => {
       setMessage("Task cannot be empty.");
       return;
     }
+
     try {
-      await axios.post(`http://localhost:5000/api/tasks/${userId}`, { task: newTaskText });
-      setMessage('✅ Task added successfully!');
+      await axios.post(`http://localhost:5000/api/tasks/${userId}`, {
+        task: newTaskText
+      });
+      setMessage('Task added successfully!');
       setNewTaskText('');
-      fetchTasks();
+      fetchTasks(); // Re-fetch tasks to update the list
     } catch (error) {
       console.error("Error adding task:", error);
       setMessage("Failed to add task. Please try again.");
@@ -49,12 +54,15 @@ const Home = ({ user, userId, setUser }) => {
       setMessage("Task cannot be empty.");
       return;
     }
+
     try {
-      await axios.put(`http://localhost:5000/api/tasks/${editTaskId}`, { task: editTaskText });
-      setMessage('✏️ Task updated successfully!');
+      await axios.put(`http://localhost:5000/api/tasks/${editTaskId}`, {
+        task: editTaskText
+      });
+      setMessage('Task updated successfully!');
       setEditTaskId(null);
       setEditTaskText('');
-      fetchTasks();
+      fetchTasks(); // Re-fetch tasks to update the list
     } catch (error) {
       console.error("Error editing task:", error);
       setMessage("Failed to edit task. Please try again.");
@@ -69,8 +77,8 @@ const Home = ({ user, userId, setUser }) => {
   const confirmDelete = async () => {
     try {
       await axios.delete(`http://localhost:5000/api/tasks/${taskToDeleteId}`);
-      setMessage('🗑️ Task deleted successfully!');
-      fetchTasks();
+      setMessage('Task deleted successfully!');
+      fetchTasks(); // Re-fetch tasks to update the list
     } catch (error) {
       console.error("Error deleting task:", error);
       setMessage("Failed to delete task. Please try again.");
@@ -91,61 +99,54 @@ const Home = ({ user, userId, setUser }) => {
   };
 
   return (
-    <div className="flex flex-col space-y-6 font-poppins">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b pb-2">
-        <h2 className="text-2xl font-bold text-gray-800">📋 Your Tasks</h2>
+    <div className="flex flex-col space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold text-gray-800">Your Tasks</h2>
         <button
           onClick={handleLogout}
-          className="px-4 py-2 text-sm bg-gradient-to-r from-red-500 to-red-600 text-white font-bold rounded-lg shadow-md hover:from-red-600 hover:to-red-700 transition-transform transform hover:scale-105"
+          className="p-2 text-sm bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-all duration-200"
         >
           Logout
         </button>
       </div>
 
-      {/* Add Task Form */}
-      <form
-        onSubmit={handleAddTask}
-        className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2"
-      >
+      {/* Form for adding a new task */}
+      <form onSubmit={handleAddTask} className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
         <input
           type="text"
           value={newTaskText}
           onChange={(e) => setNewTaskText(e.target.value)}
-          placeholder="✨ Add a new task..."
-          className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm"
+          placeholder="Add a new task..."
+          className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
         />
         <button
           type="submit"
-          className="px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:from-purple-700 hover:to-indigo-700 transition-transform transform hover:scale-105"
+          className="p-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
         >
-          ➕ Add Task
+          Add Task
         </button>
       </form>
 
-      {message && <p className="text-center text-sm font-medium text-purple-600">{message}</p>}
+      {message && <p className="text-red-500 text-center">{message}</p>}
 
-      {/* Task List */}
+      {/* List of tasks */}
       <ul className="space-y-4">
         {tasks.length === 0 ? (
-          <p className="text-center text-gray-400 italic">No tasks yet. Add your first one! 🎯</p>
+          <p className="text-center text-gray-500">No tasks found. Add a new one!</p>
         ) : (
           tasks.map((task) => (
-            <li
-              key={task._id}
-              className="p-4 bg-white rounded-lg shadow hover:shadow-lg border border-gray-100 flex items-center justify-between transition-all duration-200 transform hover:scale-[1.02]"
-            >
+            <li key={task._id} className="p-4 bg-gray-50 rounded-lg shadow-sm flex items-center justify-between transition-all duration-200 hover:shadow-md">
               {editTaskId === task._id ? (
                 <form onSubmit={handleEditTask} className="flex flex-grow items-center space-x-2">
                   <input
                     type="text"
                     value={editTaskText}
                     onChange={(e) => setEditTaskText(e.target.value)}
-                    className="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
                   <button
                     type="submit"
-                    className="px-3 py-2 text-sm bg-green-500 text-white rounded-lg shadow hover:bg-green-600"
+                    className="p-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all duration-200"
                   >
                     Save
                   </button>
@@ -155,7 +156,7 @@ const Home = ({ user, userId, setUser }) => {
                       setEditTaskId(null);
                       setEditTaskText('');
                     }}
-                    className="px-3 py-2 text-sm text-gray-500 hover:text-gray-800"
+                    className="p-2 text-sm text-gray-600 hover:text-gray-900 transition-all duration-200"
                   >
                     Cancel
                   </button>
@@ -163,10 +164,10 @@ const Home = ({ user, userId, setUser }) => {
               ) : (
                 <>
                   <span className="flex-grow text-gray-700">{task.task}</span>
-                  <div className="flex items-center space-x-2 text-xs">
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
                     {task.modifiedAt && (
-                      <span className="italic text-gray-400">
-                        (Edited {new Date(task.modifiedAt).toLocaleDateString()})
+                      <span className="italic">
+                        (Edited: {new Date(task.modifiedAt).toLocaleDateString()})
                       </span>
                     )}
                     <button
@@ -174,13 +175,13 @@ const Home = ({ user, userId, setUser }) => {
                         setEditTaskId(task._id);
                         setEditTaskText(task.task);
                       }}
-                      className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow"
+                      className="p-2 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteClick(task._id)}
-                      className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 shadow"
+                      className="p-2 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200"
                     >
                       Delete
                     </button>
@@ -192,24 +193,24 @@ const Home = ({ user, userId, setUser }) => {
         )}
       </ul>
 
-      {/* Delete Confirmation Modal */}
+      {/* Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="p-8 bg-white rounded-lg shadow-xl text-center max-w-sm w-full">
-            <h3 className="text-xl font-bold mb-4">Confirm Delete</h3>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+          <div className="p-8 bg-white rounded-lg shadow-xl text-center">
+            <h3 className="text-xl font-bold mb-4">Are you sure you want to delete this task?</h3>
             <p className="text-sm text-gray-500 mb-6">This action cannot be undone.</p>
             <div className="flex justify-center space-x-4">
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg shadow hover:bg-red-700"
+                className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-all duration-200"
               >
                 Yes, Delete
               </button>
               <button
                 onClick={cancelDelete}
-                className="px-4 py-2 bg-gray-300 text-gray-800 font-bold rounded-lg shadow hover:bg-gray-400"
+                className="px-4 py-2 bg-gray-300 text-gray-800 font-bold rounded-lg hover:bg-gray-400 transition-all duration-200"
               >
-                Cancel
+                No, Cancel
               </button>
             </div>
           </div>
