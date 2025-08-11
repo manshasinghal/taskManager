@@ -2,16 +2,16 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/backend/server.js"
     }
   ],
   "builds": [
     {
-      "src": "client/package.json",
+      "src": "frontend/package.json",
       "use": "@vercel/static-build"
     },
     {
-      "src": "server/api/index.js",
+      "src": "backend/server.js",
       "use": "@vercel/node"
     }
   ]
