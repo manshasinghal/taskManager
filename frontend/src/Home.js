@@ -24,7 +24,7 @@ const Home = ({ user, userId, setUser }) => {
 
   useEffect(() => {
     fetchTasks();
-  }, [userId]);
+  }, [userId, fetchTasks]);
 
   const handleAddTask = async (e) => {
     e.preventDefault();
